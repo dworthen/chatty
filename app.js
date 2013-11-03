@@ -6,15 +6,16 @@
 var express = require('express');
 var routes = require('./routes');
 var user = require('./routes/user');
-var http = require('https');
+var http = require('http');
 var path = require('path');
 var cons = require('consolidate');
 var fs = require('fs');
 var handlebars = require('handlebars');
 var port = process.env.PORT || 3000;
 var app = express();
-var server = http.createServer({pfx: fs.readFileSync(__dirname + '/keys/gcps.com.pfx')},
-    app);
+//var server = http.createServer({pfx: fs.readFileSync(__dirname + '/keys/gcps.com.pfx')},
+//    app);
+var server = http.createServer(app0;
 var io = require('socket.io').listen(server);
 server.listen(port);
 console.log(port);
