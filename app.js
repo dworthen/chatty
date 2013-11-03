@@ -15,7 +15,7 @@ var port = process.env.PORT || 3000;
 var app = express();
 //var server = http.createServer({pfx: fs.readFileSync(__dirname + '/keys/gcps.com.pfx')},
 //    app);
-var server = http.createServer(app0;
+var server = http.createServer(app);
 var io = require('socket.io').listen(server);
 server.listen(port);
 console.log(port);
