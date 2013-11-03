@@ -115,6 +115,10 @@ app.get('/proctor/:room?', function(req, res) {
   res.render('screen');
 });
 
+app.get('/', function(req, res) {
+  res.redirect('/chatty');
+});
+
 app.get('/chatty/:room?', function(req, res) {
   res.render('screen');
 });
