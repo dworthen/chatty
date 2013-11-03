@@ -1,0 +1,21 @@
+{
+  "name": "gcps",
+  "repo": "dworthen/gcps",
+  "description": "scripts for globalcampus",
+  "version": "0.0.1",
+  "keywords": [],
+  "dependencies": {
+    "visionmedia/page.js": "*",
+    "visionmedia/node-querystring": "*",
+    "lodash/lodash": "*",
+    "dworthen/webrtc-adapter": "*",
+    "dtao/lazy.js": "*"
+  },
+  "development": {},
+  "license": "MIT",
+  "main": "index.js",
+  "scripts": [
+    "index.js"
+  ],
+  "remotes": []
+}

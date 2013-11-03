@@ -1,0 +1,186 @@
+<html>
+<head>
+<title>SimpleRTC</title>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+  <script src="/socket.io/socket.io.js"> </script>
+  <script src="/javascripts/rsvp.js"> </script>
+  <script src="/javascripts/lodash.js"> </script>
+  <script src="/javascripts/lazy.js"> </script>
+  <script src="/javascripts/lazy.dom.js"> </script>
+  <!--<script src="/javascripts/build.js"> </script>-->
+  <script src="/javascripts/adapter.js"> </script>
+  <script>
+    //$(function() {
+    //  initialize();
+    //});
+
+    //var localMediaStream = null
+    //  , room = location.pathname.split('/').splice(2).shift() || 'test'
+    //  , video 
+    //  , canvas
+    //  , snapshot
+    //  , ctx
+    //  , socket;
+    // 
+
+    //function initialize() {
+    //  video = $('#localVideo')[0]; // video stream
+    //  canvas = $('#canvas')[0]; // invisible canvas
+    //  snapshot = $('#snapshot'); // output image
+    //  ctx = canvas.getContext('2d');
+    //  socket = io.connect('https://localhost:3000');
+
+
+    //  $('#begin').click(function(e) {
+    //    e.preventDefault();
+    //    socket.on('capture', loadCapture);
+    //    socket.emit('join session', 'test');
+
+    //    $(this).css('display', 'none');
+
+    //    // Start Video Stream
+    //    getUserMedia({video: true}, function(stream) {
+    //      attachMediaStream(video, stream);
+    //      localMediaStream = stream;
+    //      sendCapture();
+    //    }, function(){
+    //       alert("Enable and Allow your camera");
+    //    });
+
+    //  });
+
+    //}
+
+    //function loadCapture(url) {
+    //  snapshot.attr('src', url);
+    //}
+    // 
+    //function sendCapture() {
+    //  if (localMediaStream) {
+    //    var url
+    //      , width = (canvas.width = video.clientWidth)
+    //      , height = (canvas.height = video.clientHeight);
+    //    
+    //    setInterval(function() {
+    //      ctx.drawImage(video, 0, 0, width, height); // draw the captured content onto a canvas
+    //      url = canvas.toDataURL('image/png');
+    //      //snapshot.attr('src', url);
+    //      socket.emit('send capture', url);
+    //    }, 1000);
+    //  }
+    //}
+
+  </script>
+<script>
+</script>
+<style>
+  #localVideo, #snapshot {
+    float: left;
+    width: 320px;
+    height: 240px;
+  }
+
+  .clear {
+    clear: both;
+  }
+</style>
+</head>
+<body>
+  <h1>Welcome to SimpleWEBRTC!</h1>
+  <div id='container'>
+
+    <button id="begin">Begin Session</button>
+    <div id='videos'>
+      <video id='localVideo' autoplay muted></video>
+      <img src="" id="snapshot">
+      <br class='clear'/>
+    </div>
+    <canvas id="canvas" style="display:none;"></canvas>
+     
+  </div>
+<script>
+  var beginButtonClick = Lazy.events(document.getElementById('begin'), 'click');
+  var socket = io.connect('https://localhost:3000');
+
+  // pass in false to turn off console logging.
+  var log = _.partial(_log, true);
+
+  // Sending screenshots
+  socket.on('capture', log(loadCapture, 'Recieved capture'));
+  socket.on('log', function(message) {
+    log(_.identity, message)();
+  });
+
+  function getMedia(constraints) {
+    constraints = Lazy(constraints).defaults({video: true, audio: false}).toObject();
+    var promise = new RSVP.Promise(function(resolve, reject) {
+      getUserMedia(constraints, function(stream) {
+        resolve(stream);
+      }, function() {
+        reject("Please Enable Camera");
+      });
+    });
+    return promise;
+  };
+
+  // Wrap messsage around functions
+  function _log(debug, fn) {
+    var message = _.rest(arguments, 2);
+    return function() {
+      var args = _.toArray(arguments);
+      if (debug) console.log.apply(console, message);
+      return fn.apply(fn, args);
+    }
+  }
+  
+  // Used for passing arguments through a pipeline
+  function returnArgs (fn) {
+    return function() {
+      var args = _.toArray(arguments);
+      fn.apply(fn, args);
+      return args;
+    }
+  }
+
+  function loadCapture(url) {
+    var snapshot = document.getElementById('snapshot');
+    snapshot.src = url;
+  }
+
+  function sendCapture(video) {
+    var url
+      , canvas = document.getElementById('canvas')
+      , width = (canvas.width = video.clientWidth)
+      , height = (canvas.height = video.clientHeight)
+      , ctx = canvas.getContext('2d');
+    
+    setInterval(function() {
+      ctx.drawImage(video, 0, 0, width, height); // draw the captured content onto a canvas
+      url = canvas.toDataURL('image/png');
+      socket.emit('send capture', url);
+    }, 1000);
+  }
+
+  // main
+  beginButtonClick.each(function(e) {
+    e.srcElement.disabled = true;
+
+    socket.emit('join session', 'test');
+    
+    var localStream = getMedia();
+    var localVideo = document.getElementById('localVideo');
+    var attachLocalVideo = log(_.partial(attachMediaStream, localVideo), 
+      'Attaching local media stream');
+
+    localStream.then(returnArgs(attachLocalVideo))
+    .then(function(stream) {
+      log(sendCapture, 'Starting captures')(localVideo);
+    }, alert); 
+     
+  }); 
+
+  console.log(beginButtonClick);
+  
+</script>
+</body>
+</html>

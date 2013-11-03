@@ -1,0 +1,443 @@
+<html>
+<head>
+<title>SimpleRTC</title>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+  <script src="/socket.io/socket.io.js"> </script>
+  <script src="/javascripts/rsvp.js"> </script>
+  <!--<script src="/javascripts/lodash.js"> </script>-->
+  <script src="/javascripts/lazy.js"> </script>
+  <script src="/javascripts/lazy.dom.js"> </script>
+  <script src="/javascripts/build.js"> </script>
+  <script src="/javascripts/adapter.js"> </script>
+  <script src="/javascripts/browserdetect.js"> </script>
+  <link rel="stylesheet" href="/stylesheets/base.css" />
+  <link rel="stylesheet" href="/stylesheets/layout.css" />
+  <link rel="stylesheet" href="/stylesheets/skeleton.css" />
+<style>
+  @font-face {
+    font-family: 'aller_lightitalic';
+    src: url('/aller_ltit-webfont.eot');
+    src: url('/aller_ltit-webfont.eot?#iefix') format('embedded-opentype'),
+         url('/aller_ltit-webfont.woff') format('woff'),
+         url('/aller_ltit-webfont.ttf') format('truetype'),
+         url('/aller_ltit-webfont.svg#aller_lightitalic') format('svg');
+    font-weight: normal;
+    font-style: normal;
+  }
+  body {
+    background: hsl(236, 34%, 31%);
+  }
+  h1 {
+    font-family: 'aller_lightitalic';
+    font-size: 60px;
+    margin: 10px 0;
+  }
+  #container {
+    width: 840px;
+    margin: 50px auto;
+    padding: 10px;
+    background: #ffffff;
+    -webkit-border-radius: 10px;
+    -moz-border-radius: 10px;
+    border-radius: 10px;
+    -webkit-box-shadow: 2px 2px 5px 0px #000000;
+    box-shadow: 2px 2px 5px 0px #000000;
+  }
+  #contents {
+    display: none;
+  }
+  #form {
+    width: 300px;
+    margin: 10 auto;
+  }
+  #localVideos, #remoteVideos, video, audio, #chat {
+    float: left
+  }
+  #chat {
+    width: 200px;
+  }
+  #chatbox {
+    width: 192px;
+    border: 1px solid #d5d5d5;
+    height: 200px;
+    padding: 3px;
+    -webkit-box-shadow: inset 0px 0px 10px 2px #eee;
+    box-shadow: inset 0px 0px 10px 2px #eee;
+    -webkit-border-radius: 5px 5px 0px 0px;
+    border-radius: 5px 5px 0px 0px;
+  }
+  #name {
+    width: 100%;
+  }
+  #message {
+    float: left;
+    width: 150px;
+  }
+  #send {
+    float: left;
+    width: 50px;
+  }
+  #constraints {
+    width: 100%;
+    display: none;
+  }
+  #room {
+    width: 100%;
+  }
+  #begin { 
+    width: 100%;
+  }
+  video, audio {
+    width: 320px;
+  }
+  #ifChrome {
+    display: none;
+    padding-top: 10px;
+  }
+  .clear{
+    clear: both;
+  }
+</style>
+</head>
+<body>
+  <div id='container'>
+    <h1>Feelin' Chatty??</h1>
+    <div id="ifChrome">
+      <div id="form">
+        <select id="constraints">
+          <option value="video" selected="selected">Video+Audio</option>
+          <option value="audio">Audio only</option>
+        </select>
+        <input type='text' id='name' name='name' placeholder='Your name' />
+        <input type='text' id='room' name='room' placeholder='Create Room' />
+        <button id="begin">Chat Away!</button>
+      </div>
+      <div id="contents">
+        <button id="sharescreen" style='display:none;'>Share screen</button>
+        <br />
+        <div id="share"></div>
+        <div id="chat">
+          <div id="chatbox"></div>
+          <input type="text" name='message' id='message' placeholder='message' />
+          <button id="send">Send</div>
+        </div>
+        <div id='localVideos'>
+          <!--<video id='localVideo' autoplay muted controls></video>
+          <video id='remoteVideo' autoplay controls></video>-->
+          <br class='clear'/>
+        </div>
+        <div id="remoteVideos">
+          <br class='clear' />
+        </div>
+        <!--<canvas id="canvas" style="display:none;"></canvas>-->
+        <br class='clear' />
+      </div>
+    <div id="notChrome">
+    </div>
+  </div>
+<script>
+//(function() {
+  var GCPS = require('gcps')();
+  var beginButtonClick = Lazy.events(document.getElementById('begin'), 'click');
+  var localVideo = document.getElementById('localVideo');
+  var remoteVideo = document.getElementById('remoteVideo');
+  var isJoining = false;
+  var room;
+  var globalStream;
+  var name;
+
+  // pass in false to turn off console logging.
+  var log = _.partial(_log, true);
+
+  var attachLocalVideo = function(stream) {
+    var el = addMediaElement(document.getElementById('localVideos'), stream);
+    el.setAttribute('muted', true);
+    return el;
+  };
+  var attachRemoteVideo = _.partial(addMediaElement, 
+      document.getElementById('remoteVideos'));
+
+  function addMediaElement(parentDom, stream) {
+    var el = document.createElement(stream.getVideoTracks().length 
+      ? 'video'
+      : 'audio');
+
+    el.setAttribute('controls', true);
+    el.setAttribute('autoplay', true);
+    attachMediaStream(el, stream);  
+    parentDom.insertBefore(el, parentDom.firstChild);
+    return el;
+  }
+
+  function getMedia(constraints) {
+    constraints = Lazy(constraints).defaults({video: true, audio: true}).toObject();
+    var promise = new RSVP.Promise(function(resolve, reject) {
+      getUserMedia(constraints, function(stream) {
+        resolve(stream);
+      }, function() {
+        reject("Please Enable Camera");
+      });
+    });
+    return promise;
+  };
+
+  // Wrap messsage around functions
+  function _log(debug, fn) {
+    var message = _.rest(arguments, 2);
+    return function() {
+      var args = _.toArray(arguments);
+      if (debug) console.log.apply(console, message);
+      return fn.apply(fn, args);
+    }
+  }
+
+  function logServerResponse(message) {
+    log(_.identity, message)(); 
+  }
+
+  function onicecandidate(socket, peer, evt) {
+    if(!(evt || evt.candidate)) return;
+    socket.emit('ice candidate', evt.candidate);
+  }
+
+  function candidate(socket, peer, candidate) {
+    if(!candidate) return;
+    peer.addIceCandidate(new RTCIceCandidate({
+      sdpMLineIndex: candidate.sdpMLineIndex,
+      candidate: candidate.candidate  
+    }));
+  }
+
+  function onaddstream(socket, peer, evt) {
+    attachRemoteVideo(evt.stream); 
+  }
+
+  function ondatachannel(e) {
+    var receiveChannel = e.channel;
+    var el = document.createElement('div');
+    receiveChannel.onmessage = function(e) {
+      el.innerHTML = e.data;
+      document.getElementById('chatbox').appendChild(el);
+    };
+  }  
+
+  function onchat(e) {
+    var el = document.createElement('div');
+    el.innerHTML = e.data;
+    document.getElementById('chatbox').appendChild(el);
+  }
+
+  function createPeerConnection(socket, room) {
+    var iceCandidates = {
+      "iceServers": [{"url": "stun:stun.l.google.com:19302"}]
+    };
+    var peerConnection = new RTCPeerConnection(iceCandidates,
+    {optional: [{RtpDataChannels: true}]});
+    var sendChannel = peerConnection.createDataChannel(room, {reliable: false});
+    sendChannel.onmessage = log(onchat, 'Recieved a chat message');
+
+    peerConnection.onicecandidate = _log(false, _.partial(onicecandidate, socket, peerConnection), 
+      'Recieved ice candidate, passing to peer');
+    peerConnection.onaddstream = log(_.partial(onaddstream, socket, peerConnection), 
+      'Recieved remote stream, attaching to remote video');
+    
+    var sendMessage = Lazy.events(document.getElementById('send'), 'click');
+    sendMessage.each(function(e) {
+      var message = document.getElementById('message');
+      var data = message.value ? name + ': ' + message.value : '';
+      var el = document.createElement('div');
+      if (data) {
+        sendChannel.send(data);
+        el.innerHTML = data;
+        document.getElementById('chatbox').appendChild(el);
+      }
+      message.value = '';
+    });
+    
+    return peerConnection;
+  }
+
+  function createOffer(socket, peer, message) {
+    peer.createOffer(function(sessionDescription) {
+      peer.setLocalDescription(sessionDescription);
+      socket.emit('offer', sessionDescription);
+    }, null, message);
+  }
+
+  function answer(socket, peer, offerSDP) {
+    peer.setRemoteDescription(new RTCSessionDescription(offerSDP)); 
+    peer.createAnswer(function(sessionDescription) {
+      peer.setLocalDescription(sessionDescription);
+      socket.emit('send answer', sessionDescription);
+    });
+  }
+
+  function response(socket, peer, offerSDP) {
+    peer.setRemoteDescription(new RTCSessionDescription(offerSDP));
+  }
+
+  function provideInfo(socket, peer) {
+    var video = false, audio = false;
+    var streams = peer.getLocalStreams();
+    for(var i=0; i < streams.length; i++) {
+      var videoTracks = streams[i].getVideoTracks();
+      var audioTracks = streams[i].getAudioTracks();
+      video = videoTracks.length ? true : video;
+      audio = audioTracks.length ? true : audio;
+    };
+    var constraints = {
+      'mandatory': {
+        'OfferToReceiveAudio': audio,
+        'OfferToReceiveVideo': video
+      }
+    };
+    socket.emit('stream info', constraints);
+  }
+
+  function bye() {
+    var remoteVideos = document.getElementById('remoteVideos');
+    remoteVideos.innerHTML = '';
+  }
+
+  function connect(socket, room, peer) {
+
+    socket.on('log', logServerResponse);
+    socket.on('need stream information', 
+      log(_.partial(provideInfo, socket, peer), '3) Inform the other peer of your streams'));
+    socket.on('create offer',
+      log(_.partial(createOffer, socket, peer), '3) Creating Offer'));
+    socket.on('answer', 
+      log(_.partial(answer, socket, peer), '4) Answering offer'));
+    socket.on('response', 
+      log(_.partial(response, socket, peer), '4) Callee responded'));
+    socket.on('candidate', 
+      _log(false, _.partial(candidate, socket, peer), 'Recieved ice candidate'));
+    socket.on('bye', 
+      log(bye, 'Other Peer has disconnected'));
+
+    socket.emit('join session', room);
+    return socket;
+  };
+
+  function initialize(ctx) {
+    var localStream = getMedia(ctx.constraints)
+      , socket
+      , peer
+      , stream;
+
+    localStream.then(function(stream) {
+      log(attachLocalVideo, '1) Attaching local stream')(stream);
+      return stream;
+    }).then(function(stream) {
+      socket = io.connect('/');
+      peer = createPeerConnection(socket, ctx.params.room);
+      log(connect, '2) Attempting to connect to server/user', ctx.params.room)
+        (socket, ctx.params.room, peer);
+      return stream;
+    }).then(function(stream) {
+      peer.addStream(stream);
+      return stream;
+    }).then(function(stream) {
+      //var screenshare = Lazy.events(document.getElementById('sharescreen'), 'click');
+      //screenshare.each(function(e) {
+      //  var screenshare = getMedia({audio: false, video: {mandatory: {
+      //    chromeMediaSource: 'screen'}}});
+      //  screenshare.then(function(screen) {
+      //    log(attachLocalVideo, 'Sharing screen')(screen);
+      //    return screen;
+      //  }).then(function(screen) {
+      //    peer.addStream(screen);
+      //  }, alert);
+      //});
+      return stream;
+    }).then(function(stream) {
+      windowUnload(socket, peer);
+      return stream;
+    }).then(function(stream) {
+      
+    }, alert);
+  }
+
+  function windowUnload(socket, peer) {
+    window.onbeforeunload = function() {
+      peer.getLocalStreams().forEach(function(el) {
+        peer.removeStream(el);
+      });
+      socket.emit('bye');
+    }
+  }
+
+  //on page load
+  if(BrowserDetect.browser == 'Chrome' && BrowserDetect.version > 25) {
+    document.getElementById('ifChrome').setAttribute('style', 'display:block;');
+  } else {
+    var el = document.getElementById('notChrome');
+    el.innerHTML = 'Sorry this app currently only supports ' +
+    '<a href="http://google.com/chrome">Chrome</a> > 25 and you are running ' 
+    + BrowserDetect.browser + ' ' + BrowserDetect.version + ' on ' + BrowserDetect.OS;
+  }
+
+  if((room = location.pathname.split('/')[2])) {
+    isJoining = true;
+    var input = document.getElementById('room');
+    var button = document.getElementById('begin');
+    input.setAttribute('style', 'display:none;');
+    button.innerHTML = 'Join ' + room
+  }
+
+  var select = document.getElementById('constraints');
+  if ( /\/chatty/i.test(location.pathname)) 
+    select.setAttribute('style', 'display:block;');
+
+  // main
+  beginButtonClick.each(function(e) {
+    var path = location.pathname;
+    var share = document.getElementById('share');
+    name = document.getElementById('name').value;
+    document.getElementById('form').setAttribute('style', 'display:none;');
+    document.getElementById('contents').setAttribute('style', 'display:block;');
+    if(!isJoining) {
+      room = document.getElementById('room').value;
+      path = location.pathname.charAt(location.pathname.length-1) == '/' 
+        ? location.pathname + room
+        : location.pathname + '/' + room;
+      share.innerHTML = 'Share ' + location.origin 
+      + '/chatty/' + room + ' to chat with others'; 
+    }     
+    page(path + location.search);
+  }); 
+
+  page('*', function(ctx, next) {
+    ctx.query = qs.parse(location.search.slice(1));
+    next();
+  });
+
+  page('/client/:room', function(ctx, next) {
+    
+    ctx.constraints = {video: true, audio: true};
+    next();
+  });
+
+  page('/proctor/:room', function(ctx, next) {
+    
+    ctx.constraints = {video: false, audio: true};
+    next();
+  });
+
+  page('/chatty/:room', function(ctx, next) {
+    var select = document.getElementById('constraints');
+    var constraints = {
+      video: true,
+      audio: true
+    };
+    if (select.value == 'audio') constraints.video = false;
+    ctx.constraints = constraints;
+    next();
+  });
+
+  page('*', initialize);
+
+//})();
+</script>
+</body>
+</html>
