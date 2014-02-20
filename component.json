@@ -1,7 +1,7 @@
 {
-  "name": "gcps",
-  "repo": "dworthen/gcps",
-  "description": "scripts for globalcampus",
+  "name": "chatty",
+  "repo": "dworthen/chatty",
+  "description": "A simple webrtc chat application",
   "version": "0.0.1",
   "keywords": [],
   "dependencies": {

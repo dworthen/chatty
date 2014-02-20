@@ -1,13 +1,15 @@
 
-# gcps
+# Chatty
 
-  scripts for globalcampus
+A simple webrtc chat application.
 
 ## Installation
 
-  Install with [component(1)](http://component.io):
+Install with [component(1)](http://component.io):
 
-    $ component install dworthen/gcps
+```shell
+$ component install dworthen/chatty
+```
 
 ## API
 
