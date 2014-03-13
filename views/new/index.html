@@ -1,0 +1,61 @@
+{{{include "new/header"}}}
+
+<div class="grid" id="top-bar">
+  <div class="col-1-1">
+    <div class="content">
+      <h3 class="no-margin margin-left">ChitChat</h3>
+    </div>
+  </div>
+</div>
+<div class="grid grid-pad shadow-inset" id="video-area">
+  <div class="col-1-1">
+    <div class="content">
+
+      <div class="grid">
+        <div class="col-1-1">
+          <div class="video">
+            <div class="video-label">Kris</div>
+            <video controls="true" autoplay="true" src="http://vjs.zencdn.net/v/oceans.mp4" muted="true"></video>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<div class="grid" id="main">
+  <div class="col-3-12 no-padding" id="sidebar">
+    <div class="content">
+
+      <div class="relative" id="sidebar-content">
+        <video id="me" controls="true" autoplay="true" src="http://vjs.zencdn.net/v/oceans.mp4" muted="true"></video>
+
+        <ul class="list-nav">
+          <li class="active"><a href="">All</a></li>
+          <li><a href="">Kris</a></li>
+        </ul>
+
+        <div id="chat-message">
+          <textarea></textarea>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  <div class="col-9-12" id="chat-area">
+    <div class="content">
+
+      <div class="grid grid-pad">
+        <div class="col-2-12">Me:</div>
+        <div class="col-10-12">Message.</div>
+      </div>
+      <div class="grid grid-pad">
+        <div class="col-2-12">Kristopher:</div>
+        <div class="col-10-12">Message.</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{{{include "new/footer"}}}

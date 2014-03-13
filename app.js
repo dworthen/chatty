@@ -4,8 +4,7 @@
  */
 
 var express = require('express');
-var routes = require('./routes');
-var user = require('./routes/user');
+var _ = require('lodash');
 var http = require('http');
 var path = require('path');
 var cons = require('consolidate');
@@ -17,6 +16,12 @@ var app = express();
 //    app);
 var server = http.createServer(app);
 var io = require('socket.io').listen(server);
+
+var rooms = [
+  {room: 'awesome', users: [{id: 1, name: 'Derek'}, {id:2, name: 'Kris'}]},
+  {room: 'cool', users: [{id: 3, name: 'Shalee'}, {id:4, name: 'Shayna'}]}
+];
+
 server.listen(port);
 console.log(port);
 
@@ -30,7 +35,6 @@ io.sockets.on('connection', function (socket){
     }
     socket.emit('log', array.join(' '));
   }
-
 
   socket.on('join session', function(room) {
     if(!room) {
@@ -70,12 +74,6 @@ io.sockets.on('connection', function (socket){
     socket.on('bye', function() {
       socket.broadcast.to(room).emit('bye');
     });
-
-
-
-
-
-
 
 
     //socket.on('send capture', function(url) {
@@ -128,7 +126,52 @@ app.get('/test', function(req, res) {
   res.render('test');
 });
 
+app.get('/new', function(req, res) {
+  res.render('new/index');
+});
 
+app.get('/room/:id?', function(req, res) {
+  if(req.params.id) return res.send(getRoom(req.params.id));
+  return res.send(getRooms());
+});
+
+app.get('/user', function(req, res) {
+  return res.send(getUsers());
+});
+
+app.get('/user/:room/:userid', function(req, res) {
+  return res.send(getUser(req.params.room, _.parseInt(req.params.userid)));
+});
+
+function getUsers() {
+  return _.flatten(_.pluck(rooms, 'users'));
+}
+
+function getUser(room, user) {
+  var result;
+  var findIndex = _.findIndex(rooms, {'room': room});
+  if(findIndex == -1) return {};
+  result = rooms[findIndex];
+  findIndex = _.findIndex(result, {'id': user});
+  if(findIndex == -1) return {};
+  return _.cloneDeep(result[findIndex]);
+}
+
+function getRooms(room) {
+  return _.pluck(rooms, 'room');
+};
+
+function getRoom(room) {
+  var result = {};
+  var findIndex = _.findIndex(rooms, {'room': room});
+  if(findIndex > -1) {
+    result = _.cloneDeep(rooms(findIndex));
+  } else {
+    result.room = room;
+    result.users = [];
+  }
+  return result;
+}
 
 //io.sockets.on('connection', function (socket) {
 //  var initiatorChannel = '';
