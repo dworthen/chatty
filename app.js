@@ -18,8 +18,8 @@ var server = http.createServer(app);
 var io = require('socket.io').listen(server);
 
 var rooms = [
-  {room: 'awesome', users: [{id: 1, name: 'Derek'}, {id:2, name: 'Kris'}]},
-  {room: 'cool', users: [{id: 3, name: 'Shalee'}, {id:4, name: 'Shayna'}]}
+  {room: 'awesome', users: [{id: 1, name: 'Derek', rooms: ['awesome']}, {id:2, name: 'Kris', rooms: ['awesome']}]},
+  {room: 'cool', users: [{id: 3, name: 'Shalee', rooms: ['cool']}, {id:4, name: 'Shayna', rooms: ['cool']}]}
 ];
 
 server.listen(port);
@@ -81,6 +81,15 @@ io.sockets.on('connection', function (socket){
     //});
   }); 
 
+  // VERSION 2.0 
+  socket.on('connection-test', function() {
+    socket.emit('connection-successful', "Connection Test successful");
+  });
+
+  socket.on('echo-test', function(data) {
+    socket.emit('echo-test', data);
+  });
+
 });
 
 
@@ -135,37 +144,32 @@ app.get('/room/:id?', function(req, res) {
   return res.send(getRooms());
 });
 
-app.get('/user', function(req, res) {
+app.get('/user/:userid?', function(req, res) {
+  if (req.params.userid) return res.send(getUser(_.parseInt(req.params.userid)));
   return res.send(getUsers());
 });
 
-app.get('/user/:room/:userid', function(req, res) {
-  return res.send(getUser(req.params.room, _.parseInt(req.params.userid)));
-});
-
 function getUsers() {
-  return _.flatten(_.pluck(rooms, 'users'));
+  return { data: _.flatten(_.pluck(rooms, 'users'))};
 }
 
-function getUser(room, user) {
+function getUser(user) {
   var result;
-  var findIndex = _.findIndex(rooms, {'room': room});
-  if(findIndex == -1) return {};
-  result = rooms[findIndex];
-  findIndex = _.findIndex(result, {'id': user});
-  if(findIndex == -1) return {};
-  return _.cloneDeep(result[findIndex]);
+  _.forEach(rooms, function(room) {
+    result = _.find(room.users, {'id': user}) || result;
+  });
+  return result;
 }
 
 function getRooms(room) {
-  return _.pluck(rooms, 'room');
+  return {data: _.cloneDeep(rooms)};
 };
 
 function getRoom(room) {
   var result = {};
   var findIndex = _.findIndex(rooms, {'room': room});
   if(findIndex > -1) {
-    result = _.cloneDeep(rooms(findIndex));
+    result = _.cloneDeep(rooms[findIndex]);
   } else {
     result.room = room;
     result.users = [];
