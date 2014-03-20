@@ -49,6 +49,44 @@ var chatty = (function() {
         return echoTest(socket, msg);
       };
 
+      socket.uploadTest = function(sizeInMb, i) {
+        sizeInMb = sizeInMb || 0.5;
+        i = i || 1;
+        var data = new Uint8Array(sizeInMb * 1024 * 1024);
+        for(var j = 0; j < data.length; j++) {
+          data[j] = Math.ceil(Math.random() * 255);
+        }
+        var msg = {
+          sizeInMb: sizeInMb,
+          data: data,
+          iteration: i,
+          totalTime: 0
+        }
+        msg.startTime = Date.now();
+        socket.emit('upload-test', msg);
+        return promiseSocket(socket, 'upload-test-received');
+      };
+
+      socket.downloadTest = function(sizeInMb, i) {
+        sizeInMb = sizeInMb || 0.5;
+        i = i || 1;
+        var msg = {
+          sizeInMb: sizeInMb,
+          data: [],
+          iteration: i,
+          startTime: 0,
+          totalTime: 0
+        }
+        socket.emit('download-test', msg);
+        return new Promise(function(resolve, reject) {
+          socket.on('download-test-sent', function(data) {
+            data.totalTime = Date.now() - data.startTime;
+            resolve({socket: socket, data: data});
+          });
+          socketFailures(socket, reject);
+        });
+      };
+
       return socket;
     } 
   };

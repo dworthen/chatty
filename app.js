@@ -15,7 +15,13 @@ var app = express();
 //var server = http.createServer({pfx: fs.readFileSync(__dirname + '/keys/gcps.com.pfx')},
 //    app);
 var server = http.createServer(app);
-var io = require('socket.io').listen(server);
+var io = require('socket.io').listen(server, {
+  transports: ['websocket', 'xhr-polling'],
+  'heartbeat timeout': 120,
+  'heartbeat interval': 60,
+  'polling duration': 120
+});
+
 
 var rooms = [
   {room: 'awesome', users: [{id: 1, name: 'Derek', rooms: ['awesome']}, {id:2, name: 'Kris', rooms: ['awesome']}]},
@@ -88,6 +94,20 @@ io.sockets.on('connection', function (socket){
 
   socket.on('echo-test', function(data) {
     socket.emit('echo-test', data);
+  });
+
+  socket.on('upload-test', function(data) {
+    data.totalTime = Date.now() - data.startTime;
+    socket.emit('upload-test-received', data); 
+  });
+
+  socket.on('download-test', function(data) {
+    data.data = new Uint8Array(data.sizeInMb * 1024 * 1024);
+    for(var j = 0; j < data.data.length; j++) {
+      data.data[j] = Math.ceil(Math.random() * 255);
+    }
+    data.startTime = Date.now();
+    socket.emit('download-test-sent', data);
   });
 
 });

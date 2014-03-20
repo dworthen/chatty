@@ -1,3 +1,5 @@
+var socket = chatty.connect('/');
+
 // Models
 var User = can.Model.extend({
   findAll: 'GET /user',
