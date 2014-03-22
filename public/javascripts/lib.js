@@ -1,4 +1,9 @@
 var chatty = (function() {
+  var maxDataSizeInMb = 1 * 1024 * 1024; //0.5 MB by default
+  var data4UploadTest = new Uint8Array(maxDataSizeInMb);
+  for(var j = 0; j < data4UploadTest.length; j++) {
+    data4UploadTest[j] = Math.floor(Math.random() * 255);
+  }
   
   // Socket failures - REJECTION!!
   function socketFailures(socket, fn) {
@@ -11,6 +16,9 @@ var chatty = (function() {
     socket.on('reconnect_failed', function() {
       fn(new ConnectionError('Connection Dropped and Cannot be restablished.'));
     });
+    setTimeout(function() {
+      fn(new timeoutError('Timeout Error: Server took longer than 20 seconds to respond.'));
+    }, 20000);
   }
   
   function promiseSocket(socket, expectedReturn) {
@@ -49,45 +57,54 @@ var chatty = (function() {
         return echoTest(socket, msg);
       };
 
-      socket.uploadTest = function(sizeInMb, i) {
+      socket.uploadTest = function(sizeInMb) {
         sizeInMb = sizeInMb || 0.5;
-        i = i || 1;
-        var data = new Uint8Array(sizeInMb * 1024 * 1024);
-        for(var j = 0; j < data.length; j++) {
-          data[j] = Math.ceil(Math.random() * 255);
-        }
+        var offsetSize = maxDataSizeInMb - Math.floor(sizeInMb * 1024 * 1024);
+        var data = data4UploadTest.subarray(offsetSize);
+        //console.log(data);
         var msg = {
           sizeInMb: sizeInMb,
-          data: data,
-          iteration: i,
           totalTime: 0
         }
-        msg.startTime = Date.now();
-        socket.emit('upload-test', msg);
-        return promiseSocket(socket, 'upload-test-received');
+        var startTime = Date.now();
+        socket.emit('upload-test', data);
+        return new Promise(function(resolve, reject) {
+          socket.on('upload-test-received', function(data) {
+            msg.totalTime = Date.now() - startTime;
+            resolve({socket: socket, data: msg});
+          });
+          socketFailures(socket, reject);
+        });
+        //return data;
       };
 
-      socket.downloadTest = function(sizeInMb, i) {
+      socket.downloadTest = function(sizeInMb) {
         sizeInMb = sizeInMb || 0.5;
-        i = i || 1;
         var msg = {
           sizeInMb: sizeInMb,
-          data: [],
-          iteration: i,
-          startTime: 0,
           totalTime: 0
         }
-        socket.emit('download-test', msg);
+        var startTime = Date.now();
+        socket.emit('download-test', sizeInMb);
         return new Promise(function(resolve, reject) {
           socket.on('download-test-sent', function(data) {
-            data.totalTime = Date.now() - data.startTime;
-            resolve({socket: socket, data: data});
+            msg.totalTime = Date.now() - startTime;
+            resolve({socket: socket, data: msg});
           });
           socketFailures(socket, reject);
         });
       };
 
       return socket;
+    },
+    getUuid: function() {
+      var random = new Alea();
+      localStorage.uuid = localStorage.uuid || 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        localStorage.seed = random.args[0];
+        var r = random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+        return v.toString(16);
+      });
+      return localStorage.uuid;
     } 
   };
 
@@ -98,4 +115,10 @@ function ConnectionError(msg) {
   this.message = msg;
 }
 
+function timeoutError(msg) {
+  Error.call(this);
+  this.message = msg;
+}
+
 ConnectionError.prototype = Object.create(Error.prototype);
+timeoutError.prototype = Object.create(Error.prototype);
