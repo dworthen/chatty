@@ -29,10 +29,15 @@ var rooms = [
 ];
 
 var maxDataSizeInMb = 1 * 1024 * 1024; //0.5 MB by default
-var arrBuf = new ArrayBuffer(maxDataSizeInMb);
-var data4DownloadTest = new Uint8Array(arrBuf);
-for(var j = 0; j < data4DownloadTest.length; j++) {
-  data4DownloadTest[j] = Math.floor(Math.random() * 255);
+//var arrBuf = new ArrayBuffer(maxDataSizeInMb);
+//var data4DownloadTest = new Uint8Array(arrBuf);
+//for(var j = 0; j < data4DownloadTest.length; j++) {
+//  data4DownloadTest[j] = Math.floor(Math.random() * 255);
+//}
+
+var data4DownloadTest = new Buffer(maxDataSizeInMb);
+for(var i = 0; i < data4DownloadTest.length; i++) {
+  data4DownloadTest[i] = (Math.random() * 255)|0;
 }
 
 server.listen(port);
@@ -109,11 +114,8 @@ io.sockets.on('connection', function (socket){
   });
 
   socket.on('download-test', function(sizeInMb) {
-    console.log(maxDataSizeInMb);
     var offsetSize = maxDataSizeInMb - Math.floor(sizeInMb * 1024 * 1024);
     var data = data4DownloadTest.slice(offsetSize);
-    console.log(offsetSize);
-    console.log(data.length);
     socket.emit('download-test-sent', data);
   });
 
