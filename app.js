@@ -119,6 +119,10 @@ io.sockets.on('connection', function (socket){
     socket.emit('download-test-sent', data);
   });
 
+  socket.on('disconnect', function() {
+    console.log('A Client Disconnected');
+  });
+
 });
 
 
