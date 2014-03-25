@@ -29,11 +29,6 @@ var rooms = [
 ];
 
 var maxDataSizeInMb = 1 * 1024 * 1024; //0.5 MB by default
-//var arrBuf = new ArrayBuffer(maxDataSizeInMb);
-//var data4DownloadTest = new Uint8Array(arrBuf);
-//for(var j = 0; j < data4DownloadTest.length; j++) {
-//  data4DownloadTest[j] = Math.floor(Math.random() * 255);
-//}
 
 var data4DownloadTest = new Buffer(maxDataSizeInMb);
 for(var i = 0; i < data4DownloadTest.length; i++) {
@@ -119,6 +114,17 @@ io.sockets.on('connection', function (socket){
     socket.emit('download-test-sent', data);
   });
 
+  socket.on('get', function(data) {
+    var fn = {
+      getUser: getUser,
+      getUsers: getUsers,
+      getRoom: getRoom,
+      getRooms: getRooms
+    }
+    var result = fn[data.fn].apply(this, data.args);
+    socket.emit(data.fn, result); 
+  });
+
   socket.on('disconnect', function() {
     console.log('A Client Disconnected');
   });
@@ -174,16 +180,16 @@ app.get('/new', function(req, res) {
 
 app.get('/room/:id?', function(req, res) {
   if(req.params.id) return res.send(getRoom(req.params.id));
-  return res.send(getRooms());
+  return res.send({data: getRooms()});
 });
 
 app.get('/user/:userid?', function(req, res) {
   if (req.params.userid) return res.send(getUser(_.parseInt(req.params.userid)));
-  return res.send(getUsers());
+  return res.send({data: getUsers()});
 });
 
 function getUsers() {
-  return { data: _.flatten(_.pluck(rooms, 'users'))};
+  return _.flatten(_.pluck(rooms, 'users'));
 }
 
 function getUser(user) {
@@ -195,7 +201,7 @@ function getUser(user) {
 }
 
 function getRooms(room) {
-  return {data: _.cloneDeep(rooms)};
+  return _.cloneDeep(rooms);
 };
 
 function getRoom(room) {

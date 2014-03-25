@@ -95,6 +95,30 @@ var chatty = (function() {
         });
       };
 
+      socket.getRooms = function() {
+        var data = { fn: 'getRooms', args: _.toArray(arguments)};
+        socket.emit('get', data);
+        return promiseSocket(socket, 'getRooms');
+      };
+
+      socket.getRoom = function() {
+        var data = { fn: 'getRoom', args: _.toArray(arguments)};
+        socket.emit('get', data);
+        return promiseSocket(socket, 'getRoom');
+      };
+
+      socket.getUser = function() {
+        var data = { fn: 'getUser', args: _.toArray(arguments)};
+        socket.emit('get', data);
+        return promiseSocket(socket, 'getUser');
+      };
+
+      socket.getUsers = function() {
+        var data = { fn: 'getUsers', args: _.toArray(arguments)};
+        socket.emit('get', data);
+        return promiseSocket(socket, 'getUsers');
+      };
+
       return socket;
     },
     getUuid: function() {
