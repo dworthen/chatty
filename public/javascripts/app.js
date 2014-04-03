@@ -32,16 +32,16 @@ socket.on('reconnect_failed', function() {
 
 // Models
 var User = can.Model.extend({
-  findAll: 'GET /user',
-  findOne: 'GET /user/{id}',
+  findAll: socket.getUsers,
+  findOne: socket.getUser,
   create: 'POST /user',
   update: 'PUT /user/{id}',
   destroy: 'DELETE /user/{id}'
 }, {});
 
 var Room = can.Model.extend({
-  findAll: 'GET /room',
-  findOne: 'GET /room/{id}',
+  findAll: socket.getRooms,
+  findOne: socket.getRoom,
   create: 'POST /room',
   update: 'PUT /room/{id}',
   destroy: 'DELETE /room/{id}'

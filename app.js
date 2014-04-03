@@ -23,10 +23,28 @@ var io = require('socket.io').listen(server, {
 });
 
 
-var rooms = [
+var roomss = [
   {room: 'awesome', users: [{id: 1, name: 'Derek', rooms: ['awesome']}, {id:2, name: 'Kris', rooms: ['awesome']}]},
   {room: 'cool', users: [{id: 3, name: 'Shalee', rooms: ['cool']}, {id:4, name: 'Shayna', rooms: ['cool']}]}
 ];
+
+// New Data Scheme
+// rooms = {id: {name, startDate, expireDate, linkUrl, numActive, allUsers, curUsers}}
+// users = {id: {name, rooms, activeRoom}}
+
+var rooms = {
+  'room1-0001': {id: 'room1-0001', name: 'room1', startDate: 200, expireDate: 400, numActive: 2, allUsers: ['0001', '0002'], curUsers: ['0001', '0002']},
+  'room2-0002': {id: 'room1-0002', name: 'room2', startDate: 200, expireDate: 400, numActive: 2, allUsers: ['0001', '0002'], curUsers: ['0001', '0002']},
+  'room3-0003': {id: 'room1-0003', name: 'room3', startDate: 200, expireDate: 400, numActive: 2, allUsers: ['0001', '0002'], curUsers: ['0001', '0002']},
+  'room4-0004': {id: 'room1-0004', name: 'room4', startDate: 200, expireDate: 400, numActive: 2, allUsers: ['0001', '0002'], curUsers: ['0001', '0002']}
+};
+
+var users = {
+  '0001': {id: '0001', name: 'Derek', rooms: ['room1-0001', 'room2-0002'], activeRoom: 'room1-0001' },
+  '0002': {id: '0002', name: 'Derek', rooms: ['room1-0001', 'room2-0002'], activeRoom: 'room1-0001' },
+  '0003': {id: '0003', name: 'Derek', rooms: ['room1-0001', 'room2-0002'], activeRoom: 'room1-0001' },
+  '0004': {id: '0004', name: 'Derek', rooms: ['room1-0001', 'room2-0002'], activeRoom: 'room1-0001' }
+}
 
 var maxDataSizeInMb = 1 * 1024 * 1024; //0.5 MB by default
 
@@ -184,36 +202,24 @@ app.get('/room/:id?', function(req, res) {
 });
 
 app.get('/user/:userid?', function(req, res) {
-  if (req.params.userid) return res.send(getUser(_.parseInt(req.params.userid)));
+  if (req.params.userid) return res.send(getUser(req.params.userid));
   return res.send({data: getUsers()});
 });
 
 function getUsers() {
-  return _.flatten(_.pluck(rooms, 'users'));
+  return _.toArray(users);
 }
 
 function getUser(user) {
-  var result;
-  _.forEach(rooms, function(room) {
-    result = _.find(room.users, {'id': user}) || result;
-  });
-  return result;
+  return users[user];
 }
 
 function getRooms(room) {
-  return _.cloneDeep(rooms);
+  return _.toArray(rooms);
 };
 
 function getRoom(room) {
-  var result = {};
-  var findIndex = _.findIndex(rooms, {'room': room});
-  if(findIndex > -1) {
-    result = _.cloneDeep(rooms[findIndex]);
-  } else {
-    result.room = room;
-    result.users = [];
-  }
-  return result;
+  return rooms[room];
 }
 
 //io.sockets.on('connection', function (socket) {
