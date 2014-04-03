@@ -25,7 +25,7 @@ var chatty = (function() {
     var promise = new Promise(function(resolve, reject) {
       socket.on(expectedReturn, function(data) {
         data = data || {};
-        resolve({socket: socket, data: data });
+        resolve(data);
       });
       socketFailures(socket, reject);
     });
